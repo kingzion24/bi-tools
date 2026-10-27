@@ -1,0 +1,32 @@
+﻿# Portable tool installs (reinstallable, too large for GitHub)
+/PyCharm 2025.1/
+/RStudio/
+/R-4.5.0/
+
+# Original git metadata of the individual lab repos
+.git-original/
+
+# Python environments / caches
+venv/
+.venv/
+**/lab1/Include/
+**/lab1/Lib/
+**/lab1/Scripts/
+**/lab1/share/
+**/lab1/pyvenv.cfg
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Docker database volumes (raw DB files + generated private keys)
+container-volumes/
+
+# R / IDE
+.Rhistory
+.RData
+.Rproj.user/
+.idea/
+
+# OS
+Thumbs.db
+desktop.ini

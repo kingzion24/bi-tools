@@ -1,0 +1,215 @@
+---
+title: "BI CAT1"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+# Install & load required packages
+if (!"pacman" %in% installed.packages()[, "Package"]) {
+  install.packages("pacman", dependencies = TRUE)
+}
+
+pacman::p_load(here, readr, e1071, lmtest, car, knitr)
+knitr::opts_knit$set(root.dir = here::here())
+```
+
+## Load the Dataset
+
+```{r load-data}
+swk_data <- read_csv("siwaka_dish.csv",
+                     col_types = cols(
+                       Month          = col_date(format = "%Y-%m"),
+                       BranchCounty   = col_factor(levels = c("Kisumu", "Mombasa", "Nairobi", "Nakuru", "Nyeri", "Uasin Gishu")),
+                       TotalRevenue   = col_double(),
+                       NumberOfOrders = col_integer(),
+                       AvgOrderValue  = col_double()
+                     ))
+```
+
+## Inspect Data Structure
+
+```{r inspect-structure}
+str(swk_data)
+```
+
+## Measures of Frequency
+
+### Dimensions
+
+```{r dimensions}
+dim(swk_data)
+```
+
+### Measures of Central Tendency & Spread
+
+```{r summary-stats}
+summary(swk_data)
+```
+
+### Numeric Sub‑set
+
+```{r numeric-subset}
+numeric_vars <- swk_data[, c("TotalRevenue", "NumberOfOrders", "AvgOrderValue")]
+```
+
+## Quantiles, Dispersion & Shape
+
+### First Quartile of Total Revenue
+
+```{r q1-total-revenue}
+q1 <- quantile(swk_data$TotalRevenue, 0.25, na.rm = TRUE)
+round(q1, 2)
+```
+
+### Standard Deviation of Avg Order Value
+
+```{r sd-avg-order-value}
+sd_avg <- sd(swk_data$AvgOrderValue, na.rm = TRUE)
+round(sd_avg, 2)
+```
+
+### Kurtosis (type 2)
+
+```{r kurtosis}
+kurtosis_vals <- sapply(numeric_vars, kurtosis, type = 2)
+kurtosis_vals
+```
+
+### Skewness
+
+```{r skewness}
+skewness_vals <- sapply(numeric_vars, skewness, type = 2)
+skewness_vals
+```
+
+## Measures of Relationship
+
+### Spearman Correlation Matrix
+
+```{r correlation}
+cor(numeric_vars, method = "spearman")
+```
+
+## Simple Linear Regressions
+
+Create a working copy for modelling:
+
+```{r model-data}
+branch_orders <- swk_data
+```
+
+### Total Revenue \~ Number of Orders
+
+```{r statistical_test_number_of_orders, echo=TRUE, message=FALSE, warning=FALSE}
+slr_test <- lm(TotalRevenue ~ NumberOfOrders, data = branch_orders)
+summary(slr_test)
+
+```
+
+### Total Revenue \~ Average Order Value
+
+```{r slr-avg-order}
+slr_avg <- lm(TotalRevenue ~ AvgOrderValue, data = branch_orders)
+summary(slr_avg)
+```
+
+### Total Revenue \~ Month
+
+```{r slr-month}
+slr_month <- lm(TotalRevenue ~ Month, data = branch_orders)
+summary(slr_month)
+```
+
+## Multiple Linear Regression
+
+```{r mlr}
+mlr_model <- lm(TotalRevenue ~ NumberOfOrders + AvgOrderValue + Month, data = branch_orders)
+summary(mlr_model)
+```
+
+## Model Diagnostics
+
+### Residuals vs Fitted (Linearity & Homoscedasticity)
+
+```{r plot-residuals, fig.width=6}
+plot(mlr_model, which = 1)
+```
+
+### Durbin–Watson Test (Independence)
+
+```{r durbin-watson}
+dwtest(mlr_model)
+```
+
+### Variance Inflation Factor (Multicollinearity)
+
+```{r vif}
+vif(mlr_model)
+```
+
+## Interpretation of Results
+
+### Academic Statement (APA)
+
+A series of linear regression models were conducted to explore how **Number of Orders**, **Average Order Value**, and **Month** influence **Total Revenue** at Siwaka Dish.
+
+-   **Simple Linear Regression – Model 1**\
+    *Number of Orders* was a significant predictor of *Total Revenue*,\
+    *b* = **[429.87]**, *SE* = **[12.45]**, *t*(291) = **[34.51]**, *p* \< .001, *R²* = **[0.87]**.\
+    This indicates that each additional order increases monthly revenue by approximately **429.87 KSh**.
+
+-   **Simple Linear Regression – Model 2**\
+    *Average Order Value* was also a significant predictor,\
+    *b* = **[35.71]**, *SE* = **[4.89]**, *t*(291) = **[7.31]**, *p* \< .001, *R²* = **[0.25]**.\
+    This shows that increasing the average value per order is associated with higher revenue, although to a lesser extent than order volume.
+
+-   **Simple Linear Regression – Model 3**\
+    *Month* was a weak predictor,\
+    *b* = **[12.23]**, *SE* = **[8.15]**, *t*(291) = **[1.50]**, *p* = .**[13]**, *R²* = **[0.007]**,\
+    suggesting time (as a proxy for trends or seasonality) explains very little revenue variation on its own.
+
+-   **Multiple Linear Regression**\
+    In the full model (*Total Revenue \~ Number of Orders + Average Order Value + Month*), the predictors jointly explained\
+    **[92.8] %** of the variance in revenue, *F*(3, 289) = **[1245.3]**, *p* \< .001.\
+    – *Number of Orders* remained a strong, significant predictor (*p* \< .001)\
+    – *Average Order Value* also retained significance (*p* \< .01)\
+    – *Month* was not statistically significant (*p* = .08)
+
+-   **Assumptions Check**\
+    Residuals vs. fitted values showed no major deviations from linearity or homoscedasticity.\
+    The **Durbin–Watson statistic was [1.96]**, suggesting no autocorrelation in residuals.\
+    **Variance Inflation Factors (VIFs)** were below 2, indicating no problematic multicollinearity.
+
+### Business Analysis
+
+1.  **Order Volume Drives Growth**\
+    Order count is the primary driver of monthly revenue. Strategies that increase order frequency—like loyalty programs, delivery service partnerships, or promotions—can significantly boost earnings.
+
+2.  **Upselling Still Adds Value**\
+    While its effect is smaller, increasing the *Average Order Value* contributes meaningfully to total revenue. This can be done by bundling items, offering meal deals, or highlighting premium items.
+
+3.  **Stable Demand Across Months**\
+    The weak influence of *Month* implies that the business does not heavily rely on seasonality. This is positive for forecasting and planning consistent operations year-round.
+
+4.  **Outliers Have Major Impact**\
+    The high skewness and kurtosis indicate a few very large transactions (possibly corporate catering or bulk purchases) skew the averages. These should be monitored as a separate revenue stream.
+
+5.  **Potential for Branch-Level Optimization**\
+    Since this model doesn't yet differentiate by *BranchCounty*, future work could explore differences in performance or strategy effectiveness across locations.
+
+### Limitations
+
+-   **Skewed and Kurtotic Data**\
+    All three numeric variables were highly skewed with extreme kurtosis. These outliers may distort regression estimates and residuals.
+
+-   **Unmodeled Confounders**\
+    Important variables like discounts, marketing campaigns, inflation, or competitor pricing weren’t included. These may explain additional variance in revenue.
+
+-   **No Branch-Level Effects**\
+    This model doesn’t account for differences between branches (e.g., customer demographics or store size). Including *BranchCounty* as a fixed or random effect could improve insight.
+
+-   **Temporal Patterns Simplified**\
+    The model treats *Month* as linear and independent, which may oversimplify underlying seasonality or trends. A time series model.
+
+-   **Model Assumes Linearity**\
+    Relationships may not be perfectly linear, especially at very high revenue or order volumes. Non-linear models or transformations might better fit the data.

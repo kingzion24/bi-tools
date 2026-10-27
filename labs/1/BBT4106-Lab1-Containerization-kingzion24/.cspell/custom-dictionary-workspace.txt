@@ -1,0 +1,11 @@
+# Custom Dictionary Words
+mysqld
+5trathm0re
+mariadbd
+pgdata
+initdb.d
+InnoDB
+mysqldump
+isamchk
+myisamchk
+mysqlhotcopy
